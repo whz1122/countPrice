@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>自动算账页面</title>
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.staticfile.net/twitter-bootstrap/4.3.1/css/bootstrap.min.css"
+    />
+    <style>
+      input::-ms-value {
+        display: none;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container my-5">
+      <h1 class="text-center">自动算账页面</h1>
+      <div id="quotes-container"></div>
+      <label for="customer-select">选择客户：</label>
+      <select id="customer-select" onchange="changeCustomer()">
+        <option value="A">客户A</option>
+        <option value="B">客户B</option>
+      </select>
+      <button class="btn btn-primary my-3" onclick="addQuote()">
+        添加报价单
+      </button>
+    </div>
+
+    <script src="https://cdn.staticfile.net/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.net/popper.js/1.15.0/umd/popper.min.js"></script>
+    <script src="https://cdn.staticfile.net/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+    <script>
+      // 示例货物成本配置
+      const products = {
+        A: [
+          { name: 'a商品1', price: 100, cost: 50 },
+          { name: 'a商品2', price: 999, cost: 40 },
+          { name: 'a商品3', price: 888, cost: 40 },
+          { name: 'a商品4', price: 777, cost: 40 },
+          { name: 'a商品6', price: 111, cost: 40 },
+        ],
+        B: [
+          { name: 'b商品7', price: 90, cost: 45 },
+          { name: 'b商品8', price: 110, cost: 35 },
+          { name: 'b商品9', price: 110, cost: 35 },
+          { name: 'b商品4', price: 110, cost: 35 },
+          { name: 'b商品6', price: 110, cost: 35 },
+        ],
+      }
+
+      let selectedCustomer = 'A' // 默认选择客户A
+
+      function changeCustomer() {
+        selectedCustomer = document.getElementById('customer-select').value
+        updateProductList() // 更新商品选择列表
+      }
+      changeCustomer()
+      function updateProductList() {
+        const productList = document.getElementById('product-list')
+        if (productList) {
+          productList.remove() // 移除旧的商品选择列表
+        }
+        const newProductList = document.createElement('datalist')
+        newProductList.id = 'product-list'
+        products[selectedCustomer].forEach((product) => {
+          const option = document.createElement('option')
+          option.value = product.name
+          newProductList.appendChild(option)
+        })
+        document.body.appendChild(newProductList)
+      }
+      document.addEventListener('input', function (event) {
+        if (event.target && event.target.classList.contains('product-select')) {
+          const input = event.target
+          const selectedProduct = input.value
+          if (selectedProduct) {
+            updateProductData(input)
+          }
+        }
+      })
+      let quoteCount = 0
+      const quotesContainer = document.getElementById('quotes-container')
+
+      // 动态添加报价单
+      function addQuote() {
+        quoteCount++
+        const quoteDiv = document.createElement('div')
+        quoteDiv.classList.add('card', 'mb-4')
+        quoteDiv.innerHTML = `
+                <div class="card-body">
+                    <h5 class="card-title">报价单 ${quoteCount}</h5>
+                    <button class="btn btn-danger mb-3" onclick="removeQuote(this)">删除报价单</button>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th scope="col">商品</th>
+                                <th scope="col">成本</th>
+                                <th scope="col">报价</th>
+                                <th scope="col">数量</th>
+                                <th scope="col">小计</th>
+                                <th scope="col">成本</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <input list="product-list" class="form-control product-select" onchange="updateProductData(this)">
+                                </td>
+                                <td class="product-cost"></td>
+                                <td><input type="number" class="form-control product-quote" value="0" oninput="calculateSubtotal(this)"></td>
+                                <td><input type="number" class="form-control product-quantity" value="1" oninput="calculateSubtotal(this)"></td>
+                                <td class="product-subtotal">0</td>
+                                <td class="product-costtotal">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <button class="btn btn-success" onclick="addProductRow(this)">添加商品</button>
+                    <h5 class="text-right mt-3">总报价: <span class="total-quote">0</span></h5>
+                    <h5 class="text-right mt-3">总成本: <span class="total-cost">0</span></h5>
+                    <h5 class="text-right mt-3">总利润: <span class="total-profit">0</span></h5>
+                </div>
+            `
+        quotesContainer.appendChild(quoteDiv)
+      }
+
+      function removeQuote(button) {
+        quotesContainer.removeChild(button.closest('.card'))
+      }
+
+      // 动态添加商品行
+      function addProductRow(button) {
+        const tableBody = button.closest('.card-body').querySelector('tbody')
+        const newRow = document.createElement('tr')
+        newRow.innerHTML = `
+                <td>
+                    <input list="product-list" class="form-control product-select" onchange="updateProductData(this)">
+                </td>
+                <td class="product-cost"></td>
+                <td><input type="number" class="form-control product-quote" value="0" oninput="calculateSubtotal(this)"></td>
+                <td><input type="number" class="form-control product-quantity" value="1" oninput="calculateSubtotal(this)"></td>
+                <td class="product-subtotal">0</td>
+                <td class="product-costtotal">0</td>
+                <td><button class="btn btn-danger" onclick="removeProductRow(this)">删除</button></td>
+            `
+        tableBody.appendChild(newRow)
+      }
+
+      function removeProductRow(button) {
+        const row = button.closest('tr')
+        const tableBody = row.closest('tbody')
+        tableBody.removeChild(row)
+        calculateTotalQuote(row.closest('.card-body'))
+      }
+
+      // 更新产品数据
+      function updateProductData(input) {
+        const selectedProduct = input.value
+        const product = products[selectedCustomer].find(
+          (p) => p.name === selectedProduct
+        )
+        const row = input.closest('tr')
+        if (product) {
+          row.querySelector('.product-cost').textContent = product.cost
+          row.querySelector('.product-quote').value = product.price // 自动填入报价
+        }
+      }
+
+      // 计算小计
+      function calculateSubtotal(element) {
+        const row = element.closest('tr')
+        const productQuote =
+          parseFloat(row.querySelector('.product-quote').value) || 0
+        const productCost =
+          parseFloat(row.querySelector('.product-cost').textContent) || 0
+        const productQuantity =
+          parseInt(row.querySelector('.product-quantity').value) || 0
+        const subtotal = productQuote * productQuantity
+        const costtotal = productCost * productQuantity
+
+        row.querySelector('.product-subtotal').textContent = subtotal
+        row.querySelector('.product-costtotal').textContent = costtotal
+        calculateTotalQuote(row.closest('.card-body'))
+      }
+
+      // 计算总报价
+      function calculateTotalQuote(cardBody) {
+        let totalQuote = 0
+        let totalCost = 0
+        const subtotals = cardBody.querySelectorAll('.product-subtotal')
+        const costtotals = cardBody.querySelectorAll('.product-costtotal')
+        subtotals.forEach((subtotalCell) => {
+          totalQuote += parseFloat(subtotalCell.textContent) || 0
+        })
+
+        costtotals.forEach((costtotalCell) => {
+          totalCost += parseFloat(costtotalCell.textContent) || 0
+        })
+        cardBody.querySelector('.total-quote').textContent = totalQuote
+        cardBody.querySelector('.total-profit').textContent =
+          totalQuote - totalCost
+        cardBody.querySelector('.total-cost').textContent = totalCost
+      }
+    </script>
+  </body>
+</html>
